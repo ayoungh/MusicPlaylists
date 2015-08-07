@@ -31,50 +31,96 @@ var playlistsFNCount = 0;
 
 var firstRun = false;
 
-var savePlaylists = function (data, cb) {
+// var savePlaylists = function (data, cb) {
+//
+//   //go through the list given in data
+//   for (var i = 0; i < data.body.items.length; i++) {
+//     playlistCount++;
+//     playlistsArr.push(data.body.items[i]);
+//     //console.log('Batch 1: ', playlistCount, ' ', data.body.items[i].name);
+//     console.log('PlaylistName: ', data.body.items[i].name, ' <<');
+//
+//     if (typeof cb === 'function') {
+//       console.log('Get tracks: ');
+//       cb(data.body.items[i].id);
+//     } else {
+//       console.log('not a function');
+//     }
+//
+//   }
+//
+//
+//   return {
+//     playlistsFoundCount: data.body.total
+//     ,playlistsArray: playlistsArr
+//   }
+//
+//
+//
+// };
 
-  //go through the list given in data
-  for (var i = 0; i < data.body.items.length; i++) {
-    playlistCount++;
-    playlistsArr.push(data.body.items[i]);
-    //console.log('Batch 1: ', playlistCount, ' ', data.body.items[i].name);
-    console.log('PlaylistName: ', data.body.items[i].name, ' <<');
-
-    if (typeof cb === 'function') {
-      console.log('Get tracks: ');
-      cb(data.body.items[i].id);
-    } else {
-      console.log('not a function');
-    }
-
-  }
 
 
-  return {
-    playlistsFoundCount: data.body.total
-    ,playlistsArray: playlistsArr
-  }
+var getTracks = function(obj){
+
+  console.log('PLAYLIST TO GET TRACKS FOR: ', obj.name, ' ', obj.id);
+
+  var trackoffset = 0;
+  var tracksCount = 0;
+  var tracksArr = [];
+
+  var getPlaylistTracks = function (id) {
+    // Get tracks in a playlist
+    spotifyApi.getPlaylistTracks(config.username, obj.id, { 'offset' : trackoffset, 'limit' : 10 }) //, 'fields' : 'items'
+      .then(function(data) {
+        console.log('The playlist contains these tracks'); //, data.body
+
+        if (data.body.items) {
+          console.log('|-->> ', data.body.items[0].track.name);
+          tracks.push(data.body.items[0].track.name);
+          console.log(tracks);
+        } else {
+          console.log('no tracks found');
+        }
+
+        if (playlistCount === trackoffset-1) {
+          console.log(playlistsArr, ' playlists added to arr: ', playlistsArr.length);
+          //launch this function again with new offset
+          playlists(offsetAmount);
+          console.log('playlistCount', playlistCount, 'total: ', totalplaylistCount);
+        }
 
 
+      }, function(err) {
+        console.log('Something went wrong!', err);
+      });
+  };
 
-};
 
-var getTracks = function(id){
-
-  var tracks = [];
-
+  /////////////
+  // 1ST RUN //
+  /////////////
   // Get tracks in a playlist
-  spotifyApi.getPlaylistTracks(config.username, id, { 'offset' : 0, 'limit' : 5 }) //, 'fields' : 'items'
+  spotifyApi.getPlaylistTracks(config.username, obj.id, { 'offset' : trackoffset, 'limit' : 10 }) //, 'fields' : 'items'
     .then(function(data) {
       console.log('The playlist contains these tracks'); //, data.body
 
-      if (data.body.items) {
-        console.log('|-->> ', data.body.items[0].track.name);
-        tracks.push(data.body.items[0].track.name);
-        console.log(tracks);
-      } else {
-        console.log('no tracks found');
+      //tracksCount = data.body.total;
+      //Test.debug.info("tracksCount: ", tracksCount);
+      console.log(data.body.items)
+      for (var i = 0; i < data.body.items.length; i++) {
+        console.log(data.body.items[i].track.id, ' ', data.body.items[i].track.name);
       }
+
+
+      //
+      // if (data.body.items) {
+      //   console.log('|-->> ', data.body.items[0].track.name);
+      //   tracksArr.push(data.body.items[0].track.name);
+      //   console.log(tracksArr);
+      // } else {
+      //   console.log('no tracks found');
+      // }
 
 
     }, function(err) {
@@ -107,11 +153,25 @@ var playlists = function (offset) {
           playlistsArr.push( {name:data.body.items[i].name, id:data.body.items[i].id});
 
           if (playlistCount === offsetAmount-1) {
-            console.log(playlistsArr);
+            console.log(playlistsArr, ' playlists added to arr: ', playlistsArr.length);
             //launch this function again with new offset
             playlists(offsetAmount);
             console.log('playlistCount', playlistCount, 'total: ', totalplaylistCount);
           }
+
+          if (playlistCount === totalplaylistCount) {
+            console.log('WE HAVE REACHED THE END: ', playlistCount, ' ', totalplaylistCount);
+            console.log(playlistsArr, ' playlists added to arr: ', playlistsArr.length);
+
+            //now we can go through all of these playlists using the ID's and get the tracks :)
+            var playlistTracks = [];
+
+            //for (var i = 0; i < playlistsArr.length; i++) {
+              getTracks(playlistsArr[55]);
+            //}
+
+          }
+
 
         }
 
@@ -134,8 +194,6 @@ var playlists = function (offset) {
 spotifyApi.getUserPlaylists(config.username, {'limit': 10, 'offset': 0})
   .then(function(data) {
 
-
-
     if (data && data.body) {
 
       totalplaylistCount = data.body.total;
@@ -146,8 +204,6 @@ spotifyApi.getUserPlaylists(config.username, {'limit': 10, 'offset': 0})
         console.log(playlistCount, data.body.items[i].name, data.body.items[i].id);
         playlistsArr.push( {name:data.body.items[i].name, id:data.body.items[i].id});
 
-        //console.log('data.body.offset: ', data.body.offset);
-
         if (i === offsetAmount-1) { //!firstRun &&
           //console.log(playlistsArr);
           firstRun = true;
@@ -156,31 +212,10 @@ spotifyApi.getUserPlaylists(config.username, {'limit': 10, 'offset': 0})
           playlists(offsetAmount);
 
         }
-        //  else {
-        //    if (i === data.body.offset-1) {
-        //      //launch this function again with new offset
-        //      playlists(offsetAmount);
-        //    }
-        // }
 
       }
 
     }
-
-
-    //console.log(data);
-
-    //console.log('spotifyApi.getUserPlaylists - Retrieved playlists', data.body.total);
-
-    //savePlaylists(data, getTracks);
-
-      //for the playlist id get the tracks inside
-      //console.log(data.body.items[i]);
-
-      //console.log('i: ', i, 'data.body.items.length: ', data.body.items.length);
-      // if (i+1 === data.body.items.length) {
-      //   console.log('Batch 1: playlistsArr: ', playlistsArr, playlistsArr.length);
-      // }
 
 
   },function(err) {
