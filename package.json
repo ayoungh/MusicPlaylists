@@ -1,0 +1,14 @@
+{
+  "name": "musicplaylists",
+  "version": "1.0.0",
+  "description": "Simple script to cross over playlists to each platform I have used",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "spotify-web-api-node": "^2.1.0"
+  }
+}
